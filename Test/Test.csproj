@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+		<GenerateCabinet>false</GenerateCabinet>
+  </PropertyGroup>
+
+	<Import Project="../cabinet/build/cabinet.targets" />
+</Project>
