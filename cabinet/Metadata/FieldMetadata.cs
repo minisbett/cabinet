@@ -3,25 +3,52 @@ using System.Reflection.Metadata;
 
 namespace cabinet.Metadata;
 
-internal class FieldMetadata(string type, string name, bool isGenericParameterType, bool isGenericType)
+/// <summary>
+/// Represents the metadata of a .NET field.
+/// </summary>
+internal class FieldMetadata(string type, string name, bool isNullableType)
 {
+  /// <summary>
+  /// The name of the type of this field.
+  /// </summary>
   public string Type => type;
 
+  /// <summary>
+  /// The name of this field.
+  /// </summary>
   public string Name => name;
 
-  public bool IsGenericParameterType => isGenericParameterType;
+  /// <summary>
+  /// Bool whether the type of this field is a generic parameter of the declaring type.
+  /// </summary>
+  public bool IsGenericParameterType => type is TypeNameProvider.GENERIC_TYPE_IDENTIFIER;
 
-  public bool IsGenericType => isGenericType;
+  /// <summary>
+  /// Bool whether the type of this field is generic.
+  /// </summary>
+  public bool IsGenericType => type.Contains("`"); // Foo`1 -> generic
 
+  /// <summary>
+  /// Bool whether this field is nullable. If true, the nullable shell (System.Nullable) will be omitted from <see cref="Type"/>.
+  /// </summary>
+  public bool IsNullableType => isNullableType;
+
+  /// <summary>
+  /// Resolves the specified <see cref="FieldDefinitionHandle"/> into a <see cref="FieldMetadata"/> object.
+  /// </summary>
   public static FieldMetadata FromHandle(MetadataReader reader, FieldDefinitionHandle handle)
   {
     FieldDefinition definition = reader.GetFieldDefinition(handle);
-    TypeDefinition typeDefinition = reader.GetTypeDefinition(definition.GetDeclaringType());
     string type = definition.DecodeSignature(new TypeNameProvider(), null);
-    return new FieldMetadata(
-      type,
-      reader.GetString(definition.Name),
-      Enumerable.Range(0, typeDefinition.GetGenericParameters().Count).Select(x => $"T{x}").Contains(type),
-      type.Contains("`"));
+
+    // If the field type is nullable, we omit the System.Nullable<...> from the string representation of the type, and instead store the state.
+    bool isNullable = false;
+    if (type.StartsWith("System.Nullable"))
+    {
+      type = type.Substring(18).TrimEnd('>');
+      isNullable = true;
+    }
+
+    return new FieldMetadata(type, reader.GetString(definition.Name), isNullable);
   }
 }

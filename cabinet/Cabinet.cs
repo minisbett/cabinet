@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -12,9 +13,15 @@ namespace cabinet;
 
 public class Cabinet : Microsoft.Build.Utilities.Task
 {
+  /// <summary>
+  /// The $(OutDir) MSBuild variable. Represents the output directory of the compilation.
+  /// </summary>
   [Required]
   public string OutDir { get; set; } = null!;
 
+  /// <summary>
+  /// The $(TargetPath) MSBuild variable. Represents the path to the compiled binary.
+  /// </summary>
   [Required]
   public string TargetPath { get; set; } = null!;
 
@@ -48,7 +55,12 @@ public class Cabinet : Microsoft.Build.Utilities.Task
 
       List<CField> fields = [];
       foreach (FieldMetadata field in type.Fields)
-        fields.Add(new(_cTypeMap.TryGetValue(field.Type, out string cType) ? cType : field.Type, field.Name));
+      {
+        if(field.IsNullableType)
+          fields.Add(new(_cTypeMap[nameof(Boolean)], $"has{field.Name.ToPascalCase()}"));
+
+        fields.Add(new(_cTypeMap.TryGetValue(field.Type, out string cType) ? cType : field.Type, field.Name.ToCamelCase()));
+      }
 
       structs.Add(new(typeName, [.. fields]));
     }
@@ -58,6 +70,9 @@ public class Cabinet : Microsoft.Build.Utilities.Task
     return true;
   }
 
+  /// <summary>
+  /// A map for the string representation of C#-types into C-types.
+  /// </summary>
 
   private static readonly Dictionary<string, string> _cTypeMap = new()
   {

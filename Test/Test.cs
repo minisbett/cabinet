@@ -1,16 +1,28 @@
-﻿public struct Test1<T>
+﻿using System.Diagnostics;
+
+public struct ShouldExist<T>
 {
   public int x;
 }
 
 
-public struct Test2<T>
+public struct ShouldNotExist_HasT<T>
 {
   public int x;
   public T y;
 }
 
-public struct Test2
+public struct ShouldNotExist_HasGeneric
 {
-  public Test1<int> x;
+  public ShouldExist<int> x;
+}
+
+public struct ShouldExist_Nullable
+{
+  public int? x;
+}
+
+public struct ShouldNotExist_NullableHasGeneric
+{
+  public ShouldExist<int>? x;
 }

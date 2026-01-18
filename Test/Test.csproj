@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
-		<GenerateCabinet>false</GenerateCabinet>
+		<GenerateCabinet>true</GenerateCabinet>
   </PropertyGroup>
 
 	<Import Project="../cabinet/build/cabinet.targets" />
