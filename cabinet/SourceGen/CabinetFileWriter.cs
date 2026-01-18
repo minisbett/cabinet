@@ -11,6 +11,7 @@ internal static class CabinetFileWriter
   private const string SHELL =
     """
     #include <stdint.h>
+    #include <stdbool.h>
 
     {0}
     """;
