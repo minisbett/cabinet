@@ -6,7 +6,7 @@ namespace cabinet.Metadata;
 /// <summary>
 /// Represents the metadata of a .NET field.
 /// </summary>
-internal class FieldMetadata(string type, string name, bool isNullableType, bool isPointerType)
+internal class FieldMetadata(string type, string name, bool isPointerType, bool isNullableType, bool isGenericType, bool isGenericParameterType)
 {
   /// <summary>
   /// The name of the type of this field.
@@ -19,14 +19,9 @@ internal class FieldMetadata(string type, string name, bool isNullableType, bool
   public string Name => name;
 
   /// <summary>
-  /// Bool whether the type of this field is a generic parameter of the declaring type.
+  /// Bool whether this field is a pointer. If true, the pointer marker (*) will be omitted from <see cref="Type"/>.
   /// </summary>
-  public bool IsGenericParameterType => type is TypeNameProvider.GENERIC_TYPE_IDENTIFIER;
-
-  /// <summary>
-  /// Bool whether the type of this field is generic.
-  /// </summary>
-  public bool IsGenericType => type.Contains("`"); // Foo`1 -> generic
+  public bool IsPointerType => isPointerType;
 
   /// <summary>
   /// Bool whether this field is nullable. If true, the nullable shell (System.Nullable) will be omitted from <see cref="Type"/>.
@@ -34,9 +29,14 @@ internal class FieldMetadata(string type, string name, bool isNullableType, bool
   public bool IsNullableType => isNullableType;
 
   /// <summary>
-  /// Bool whether this field is a pointer. If true, the pointer marker (*) will be omitted from <see cref="Type"/>.
+  /// Bool whether the type of this field is a generic parameter of the declaring type.
   /// </summary>
-  public bool IsPointerType => isPointerType;
+  public bool IsGenericParameterType => isGenericParameterType;
+
+  /// <summary>
+  /// Bool whether the type of this field is generic. If true, the generic suffix (eg. `1) will be omitted from <see cref="Type"/>.
+  /// </summary>
+  public bool IsGenericType => isGenericType;
 
   /// <summary>
   /// Resolves the specified <see cref="FieldDefinitionHandle"/> into a <see cref="FieldMetadata"/> object.
@@ -46,22 +46,34 @@ internal class FieldMetadata(string type, string name, bool isNullableType, bool
     FieldDefinition definition = reader.GetFieldDefinition(handle);
     string type = definition.DecodeSignature(new TypeNameProvider(), null);
 
-    bool isNullable = false;
     bool isPointer = false;
+    bool isNullable = false;
+    bool isGenericParameter = false;
+    bool isGeneric = false;
 
-    // If nullable, we omit the System.Nullable<...>.
-    if (type.StartsWith("System.Nullable"))
+    // NOTE: It is important to unpack pointers first, followed by nullables.
+    //       Otherwise this can cause complications for types such as 'int?*'.
+    if (type.StartsWith(TypeNameProvider.POINTER_IDENTIFIER))
     {
-      type = type.Substring(18).TrimEnd('>');
-      isNullable = true;
-    }
-    // If a pointer, we omit the '*'.
-    else if(type.EndsWith("*"))
-    {
-      type = type.TrimEnd('*');
+      type = type.Substring(TypeNameProvider.POINTER_IDENTIFIER.Length);
       isPointer = true;
     }
+    if (type.StartsWith("System.Nullable"))
+    {
+      type = type.Substring(18).TrimEnd('>'); // omit System.Nullable<...>
+      isNullable = true;
+    }
+    if (type.Contains("`"))
+    {
+      type = type.Split('`')[0]; // omit `X
+      isGeneric = true;
+    }
+    if(type.StartsWith(TypeNameProvider.GENERIC_PARAMETER_IDENTIFIER))
+    {
+      type = type.Substring(TypeNameProvider.GENERIC_PARAMETER_IDENTIFIER.Length);
+      isGenericParameter = true;
+    }
 
-    return new FieldMetadata(type, reader.GetString(definition.Name), isNullable, isPointer);
+    return new FieldMetadata(type, reader.GetString(definition.Name), isPointer, isNullable, isGeneric, isGenericParameter);
   }
 }

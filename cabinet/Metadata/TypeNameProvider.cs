@@ -10,25 +10,33 @@ namespace cabinet.Metadata;
 internal class TypeNameProvider : ISignatureTypeProvider<string, object?>
 {
   /// <summary>
-  /// The string representation of generic type parameters, allowing to determine whether a type 
+  /// A prefix for the string representation of generic type parameters, allowing to determine whether a type 
   /// is a generic parameter by comparing the string representation to this constant.
   /// 
-  /// This constant should not be an allowed type identifier, as it poses the risk of conflict with actual types.
+  /// This constant should not be an allowed type identifier, as it poses the risk of conflict with actual type names.
   /// </summary>
-  public const string GENERIC_TYPE_IDENTIFIER = "<generic>";
+  public const string GENERIC_PARAMETER_IDENTIFIER = "<generic>";
+
+  /// <summary>
+  /// A prefix for the string representation of pointers, allowing to determine whether a type 
+  /// is a pointer by comparing the string representation to this constant.
+  /// 
+  /// This constant should not be an allowed type identifier, as it poses the risk of conflict with actual type names.
+  /// </summary>
+  public const string POINTER_IDENTIFIER = "<pointer>";
 
   public string GetPrimitiveType(PrimitiveTypeCode typeCode) => typeCode.ToString();
 
-  public string GetPointerType(string elementType) => $"{elementType}*";
+  public string GetPointerType(string elementType) => $"{POINTER_IDENTIFIER}{elementType}";
 
   public string GetSZArrayType(string elementType) => $"{elementType}[]";
 
   public string GetGenericInstantiation(string genericType, ImmutableArray<string> typeArguments)
     => genericType + "<" + string.Join(",", typeArguments) + ">";
 
-  public string GetGenericMethodParameter(object? genericContext, int index) => GENERIC_TYPE_IDENTIFIER;
+  public string GetGenericMethodParameter(object? genericContext, int index) => $"{GENERIC_PARAMETER_IDENTIFIER}T{index}";
 
-  public string GetGenericTypeParameter(object? genericContext, int index) => GENERIC_TYPE_IDENTIFIER;
+  public string GetGenericTypeParameter(object? genericContext, int index) => $"{GENERIC_PARAMETER_IDENTIFIER}T{index}";
 
   public string GetTypeFromDefinition(MetadataReader reader, TypeDefinitionHandle handle, byte rawTypeKind)
   {

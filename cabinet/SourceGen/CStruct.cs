@@ -10,12 +10,12 @@ internal class CStruct(string name, CField[] fields)
   /// <summary>
   /// The name of the type of this struct.
   /// </summary>
-  private string Name => name;
+  public string Name => name;
 
   /// <summary>
   /// The fields declared by this struct.
   /// </summary>
-  private CField[] Fields => fields;
+  public CField[] Fields => fields;
 
   /// <summary>
   /// Returns the source code for this struct.

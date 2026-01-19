@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -37,32 +38,40 @@ public class Cabinet : Microsoft.Build.Utilities.Task
     using PEReader peReader = new(fs);
     MetadataReader reader = peReader.GetMetadataReader();
 
-    TypeMetadata[] types = [..reader.TypeDefinitions.Select(x => TypeMetadata.FromHandle(reader, x))];
-    Debugger.Launch();
+    TypeMetadata[] types = [.. reader.TypeDefinitions.Select(x => TypeMetadata.FromHandle(reader, x))];
+    TypeMetadata[] structTypes = [.. types.Where(x => x.IsStruct)];
+
     // -----------------------------
     // -          Structs          -
     // -----------------------------
     List<CStruct> structs = [];
-    foreach (TypeMetadata type in types.Where(x => x.IsStruct))
+
+    string EnsureNullableHelperStruct(string fieldType)
     {
-      // Regardless of how we work with thie struct, we will want to strip off the generic suffix.
+      string structName = $"Cabinet__Nullable_{fieldType}";
+      if (!structs.Any(x => x.Name == structName))
+        structs.Add(new($"Cabinet__Nullable_{fieldType}", [new("bool", "hasValue"), new(fieldType, "value")]));
+
+      return $"Cabinet__Nullable_{fieldType}";
+    }
+
+    foreach (TypeMetadata type in structTypes)
+    {
       string typeName = type.Name.Split('`')[0]; // Foo`1 -> Foo
 
       // If the struct has fields whose types are either 1. generic type (Foo<T>) or 2. generic parameter (T), ignore this type.
       // If a struct is generic, but has no fields with a generic parameter as type, the struct is safe to pass.
       if (type.Fields.Any(x => x.IsGenericType || x.IsGenericParameterType))
-          continue;
+        continue;
 
       List<CField> fields = [];
       foreach (FieldMetadata field in type.Fields)
       {
-        if(field.IsNullableType)
-          fields.Add(new(_cTypeMap[nameof(Boolean)], $"has{field.Name.ToPascalCase()}"));
-
         string fieldType = _cTypeMap.TryGetValue(field.Type, out string cType) ? cType : field.Type;
-        if (field.IsPointerType)
-          fieldType += "*";
-        fields.Add(new(fieldType, field.Name.ToCamelCase()));
+        if (field.IsNullableType)
+          fieldType = EnsureNullableHelperStruct(fieldType);
+
+        fields.Add(new(fieldType, field.Name.ToCamelCase(), field.IsPointerType));
       }
 
       structs.Add(new(typeName, [.. fields]));
