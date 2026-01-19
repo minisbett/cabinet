@@ -4,9 +4,9 @@ using System.Reflection.Metadata;
 namespace cabinet.Metadata;
 
 /// <summary>
-/// Represents the metadata of a .NET type.
+/// Represents the metadata of the definition a .NET type.
 /// </summary>
-internal class TypeMetadata(string @namespace, string name, string? baseType, FieldMetadata[] fields, bool isGeneric)
+internal class TypeMetadata(string @namespace, string name, FieldMetadata[] fields, bool isStruct, bool isGeneric)
 {
   /// <summary>
   /// The namespace this type is declared in.
@@ -17,11 +17,6 @@ internal class TypeMetadata(string @namespace, string name, string? baseType, Fi
   /// The name of this type.
   /// </summary>
   public string Name => name;
-
-  /// <summary>
-  /// The name of the base type of this type. This will be null if the type has no base type metadata.
-  /// </summary>
-  public string? BaseType => baseType;
 
   /// <summary>
   /// The metadata of the fields declared by this type.
@@ -36,7 +31,7 @@ internal class TypeMetadata(string @namespace, string name, string? baseType, Fi
   /// <summary>
   /// Bool whether this type is a struct.
   /// </summary>
-  public bool IsStruct => BaseType is "System.ValueType";
+  public bool IsStruct => isStruct;
 
   /// <summary>
   /// Bool whether this type is generic.
@@ -49,15 +44,20 @@ internal class TypeMetadata(string @namespace, string name, string? baseType, Fi
   public static TypeMetadata FromHandle(MetadataReader reader, TypeDefinitionHandle handle)
   {
     TypeDefinition definition = reader.GetTypeDefinition(handle);
-    TypeReference? baseType = definition.BaseType.Kind is HandleKind.TypeReference
-                            ? reader.GetTypeReference((TypeReferenceHandle)definition.BaseType)
-                            : null;
+
+    // If the base type is System.ValueTuple, this type is a struct.
+    bool isStruct = false;
+    if(definition.BaseType.Kind is HandleKind.TypeReference)
+    {
+      TypeReference reference = reader.GetTypeReference((TypeReferenceHandle)definition.BaseType);
+      isStruct = reader.GetString(reference.Namespace) is "System" && reader.GetString(reference.Name) is "ValueType";
+    }
 
     return new TypeMetadata(
       reader.GetString(definition.Namespace),
       reader.GetString(definition.Name),
-      baseType is null ? null : $"{reader.GetString(baseType.Value.Namespace)}.{reader.GetString(baseType.Value.Name)}",
       [.. definition.GetFields().Select(x => FieldMetadata.FromHandle(reader, x))],
+      isStruct,
       definition.GetGenericParameters().Count > 0);
   }
 }

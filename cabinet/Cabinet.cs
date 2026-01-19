@@ -38,7 +38,7 @@ public class Cabinet : Microsoft.Build.Utilities.Task
     MetadataReader reader = peReader.GetMetadataReader();
 
     TypeMetadata[] types = [..reader.TypeDefinitions.Select(x => TypeMetadata.FromHandle(reader, x))];
-
+    Debugger.Launch();
     // -----------------------------
     // -          Structs          -
     // -----------------------------
@@ -59,7 +59,10 @@ public class Cabinet : Microsoft.Build.Utilities.Task
         if(field.IsNullableType)
           fields.Add(new(_cTypeMap[nameof(Boolean)], $"has{field.Name.ToPascalCase()}"));
 
-        fields.Add(new(_cTypeMap.TryGetValue(field.Type, out string cType) ? cType : field.Type, field.Name.ToCamelCase()));
+        string fieldType = _cTypeMap.TryGetValue(field.Type, out string cType) ? cType : field.Type;
+        if (field.IsPointerType)
+          fieldType += "*";
+        fields.Add(new(fieldType, field.Name.ToCamelCase()));
       }
 
       structs.Add(new(typeName, [.. fields]));
