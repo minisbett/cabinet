@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection.Metadata;
@@ -36,9 +38,13 @@ public class Cabinet : Microsoft.Build.Utilities.Task
     MetadataReader reader = peReader.GetMetadataReader();
 
     TypeMetadata[] types = [.. reader.TypeDefinitions.Select(x => TypeMetadata.FromHandle(reader, x))];
+    TypeMetadata[] enums = [.. types.Where(x => x.IsEnum)];
     TypeMetadata[] structs = [.. types.Where(x => x.IsStruct)];
+    ExportedMethodMetadata[] methods = [.. types.SelectMany(x => x.ExportedMethods)];
 
+    List<CEnum> cEnums = [];
     List<CStruct> cStructs = [];
+    List<CFunction> cFunctions = [];
 
     string EnsureNullableHelperStruct(string fieldType)
     {
@@ -48,6 +54,12 @@ public class Cabinet : Microsoft.Build.Utilities.Task
 
       return structName;
     }
+
+    // -----------------------------
+    // -           Enums           -
+    // -----------------------------
+    foreach (TypeMetadata @enum in enums)
+      cEnums.Add(new(@enum.Name, [.. @enum.Fields.Select(x => (x.Name, x.DefaultValue))]));
 
     // -----------------------------
     // -          Structs          -
@@ -76,8 +88,7 @@ public class Cabinet : Microsoft.Build.Utilities.Task
     // -----------------------------
     // -         Functions         -
     // -----------------------------
-    List<CFunction> cFunctions = [];
-    foreach (ExportedMethodMetadata method in types.SelectMany(x => x.ExportedMethods))
+    foreach (ExportedMethodMetadata method in methods)
     {
       string returnType = MapToCType(method.ReturnType.Name);
       if (method.ReturnType.IsNullable)
@@ -96,7 +107,7 @@ public class Cabinet : Microsoft.Build.Utilities.Task
       cFunctions.Add(new(returnType, method.EntryPoint, method.ReturnType.IsPointer, [.. parameters]));
     }
 
-    CabinetFileWriter.Write(Path.Combine(OutDir, "cabinet.h"), [.. cStructs], [.. cFunctions]);
+    CabinetFileWriter.Write(Path.Combine(OutDir, "cabinet.h"), [.. cEnums], [.. cStructs], [.. cFunctions]);
 
     return true;
   }

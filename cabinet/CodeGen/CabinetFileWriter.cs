@@ -20,12 +20,13 @@ internal static class CabinetFileWriter
   /// <summary>
   /// Generates the source for the specified objects and writes it to the specified file.
   /// </summary>
-  public static void Write(string filePath, CStruct[] structs, CFunction[] functions)
+  public static void Write(string filePath, CEnum[] enums, CStruct[] structs, CFunction[] functions)
   {
-    List<string> elements = [.. structs.Select(x => x.ToString()), .. functions.Select(x => x.ToString())];
+    string enumsStr = string.Join("\n\n", enums.Select(x => x.ToString()));
+    string structsStr = string.Join("\n\n", structs.Select(x => x.ToString()));
+    string functionsStr = string.Join("\n", functions.Select(x => x.ToString()));
 
-    string content = string.Format(SHELL, string.Join("\n\n", elements));
-
+    string content = string.Format(SHELL, string.Join("\n\n", [enumsStr, structsStr, functionsStr]));
     File.WriteAllText(filePath, content);
   }
 }

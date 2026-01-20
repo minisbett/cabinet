@@ -1,4 +1,6 @@
-﻿public unsafe struct ShouldExist<T>
+﻿using System.Diagnostics;
+
+public unsafe struct ShouldExist<T>()
 {
   public int x;
   public int* y;
@@ -26,3 +28,5 @@ public struct ShouldNotExist_NullableHasGeneric
 {
   public ShouldExist<int>? x;
 }
+
+public enum TestEnum { Foo = 1 << 6, Bar = 4, D = 0 }

@@ -7,7 +7,7 @@ namespace cabinet.Metadata;
 /// <summary>
 /// Represents the metadata of the definition a .NET type.
 /// </summary>
-internal class TypeMetadata(string @namespace, string name, FieldMetadata[] fields, ExportedMethodMetadata[] exportedMethods, bool isStruct)
+internal class TypeMetadata(string @namespace, string name, FieldMetadata[] fields, ExportedMethodMetadata[] exportedMethods, bool isStruct, bool isEnum)
 {
   /// <summary>
   /// The name of this type.
@@ -35,6 +35,11 @@ internal class TypeMetadata(string @namespace, string name, FieldMetadata[] fiel
   public bool IsStruct => isStruct;
 
   /// <summary>
+  /// Bool whether this type if an enum.
+  /// </summary>
+  public bool IsEnum => isEnum;
+
+  /// <summary>
   /// Resolves the specified <see cref="FieldDefinitionHandle"/> into a <see cref="FieldMetadata"/> object.
   /// </summary>
   public static TypeMetadata FromHandle(MetadataReader reader, TypeDefinitionHandle handle)
@@ -43,11 +48,19 @@ internal class TypeMetadata(string @namespace, string name, FieldMetadata[] fiel
 
     // Structs always inherit from the base type 'System.ValueType'.
     bool isStruct = false;
+    bool isEnum = false;
     if (definition.BaseType.Kind is HandleKind.TypeReference)
     {
       TypeReference reference = reader.GetTypeReference((TypeReferenceHandle)definition.BaseType);
-      isStruct = reader.GetString(reference.Namespace) is "System" && reader.GetString(reference.Name) is "ValueType";
+      string fullName = $"{reader.GetString(reference.Namespace)}.{reader.GetString(reference.Name)}";
+      isStruct = fullName is "System.ValueType";
+      isEnum = fullName is "System.Enum";
     }
+
+    List<FieldMetadata> fields = [];
+    foreach (FieldDefinitionHandle fieldHandle in definition.GetFields())
+      if (!isEnum || reader.GetString(reader.GetFieldDefinition(fieldHandle).Name) is not "value__") // omit the 'value__' field if this is an enum
+        fields.Add(FieldMetadata.FromHandle(reader, fieldHandle));
 
     List<ExportedMethodMetadata> exportedMethods = [];
     foreach (MethodDefinitionHandle methodHandle in definition.GetMethods())
@@ -57,8 +70,9 @@ internal class TypeMetadata(string @namespace, string name, FieldMetadata[] fiel
     return new TypeMetadata(
       reader.GetString(definition.Namespace),
       reader.GetString(definition.Name).Split('`')[0], // omit the '`' generic suffix (Foo`1 -> Foo)
-      [.. definition.GetFields().Select(x => FieldMetadata.FromHandle(reader, x))],
+      [.. fields],
       [.. exportedMethods],
-      isStruct);
+      isStruct,
+      isEnum);
   }
 }
