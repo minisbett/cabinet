@@ -9,23 +9,23 @@ namespace cabinet.CodeGen;
 /// </summary>
 internal static class CabinetFileWriter
 {
-    private const string SHELL =
-      """
+  private const string SHELL =
+    """
     #include <stdint.h>
     #include <stdbool.h>
 
     {0}
     """;
 
-    /// <summary>
-    /// Generates the source for the specified objects and writes it to the specified file.
-    /// </summary>
-    public static void Write(string filePath, CStruct[] structs, CFunction[] functions)
-    {
-        List<string> elements = [.. structs.Select(x => x.ToString()), .. functions.Select(x => x.ToString())];
+  /// <summary>
+  /// Generates the source for the specified objects and writes it to the specified file.
+  /// </summary>
+  public static void Write(string filePath, CStruct[] structs, CFunction[] functions)
+  {
+    List<string> elements = [.. structs.Select(x => x.ToString()), .. functions.Select(x => x.ToString())];
 
-        string content = string.Format(SHELL, string.Join("\n\n", elements));
+    string content = string.Format(SHELL, string.Join("\n\n", elements));
 
-        File.WriteAllText(filePath, content);
-    }
+    File.WriteAllText(filePath, content);
+  }
 }

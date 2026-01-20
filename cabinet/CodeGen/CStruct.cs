@@ -7,16 +7,16 @@ namespace cabinet.CodeGen;
 /// </summary>
 internal class CStruct(string name, CField[] fields)
 {
-    /// <summary>
-    /// The name of the type of this struct.
-    /// </summary>
-    public string Name => name;
+  /// <summary>
+  /// The name of the type of this struct.
+  /// </summary>
+  public string Name => name;
 
-    /// <summary>
-    /// Returns the source code for this struct.
-    /// </summary>
-    public override string ToString()
-    => $$"""
+  /// <summary>
+  /// Returns the source code for this struct.
+  /// </summary>
+  public override string ToString()
+  => $$"""
      typedef struct {{Name}}
      {
          {{string.Join("\n    ", fields.Select(x => x.ToString()))}}
