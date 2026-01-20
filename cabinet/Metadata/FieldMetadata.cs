@@ -38,7 +38,6 @@ internal class FieldMetadata(SignatureTypeMetadata type, string name, object? de
     ConstantHandle defaultValueConstantHandle = definition.GetDefaultValue();
     if (!defaultValueConstantHandle.IsNil)
     {
-      Debugger.Launch();
       Constant defaultValueConstant = reader.GetConstant(definition.GetDefaultValue());
       byte[] bytes = reader.GetBlobBytes(defaultValueConstant.Value);
       defaultValue = defaultValueConstant.TypeCode switch
