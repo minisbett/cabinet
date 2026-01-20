@@ -5,8 +5,8 @@
 /// </summary>
 internal class CField(string type, string name, bool isPointer = false)
 {
-    /// <summary>
-    /// Returns the source code for this field.
-    /// </summary>
-    public override string ToString() => $"{type}{(isPointer ? "*" : "")} {name};";
+  /// <summary>
+  /// Returns the source code for this field.
+  /// </summary>
+  public override string ToString() => $"{type}{(isPointer ? "*" : "")} {name};";
 }
