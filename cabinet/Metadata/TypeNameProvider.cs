@@ -41,13 +41,13 @@ internal class TypeNameProvider : ISignatureTypeProvider<string, object?>
   public string GetTypeFromDefinition(MetadataReader reader, TypeDefinitionHandle handle, byte rawTypeKind)
   {
     TypeDefinition definition = reader.GetTypeDefinition(handle);
-    return reader.GetString(definition.Name); // The namespace is purposefully omitted here: Foo<Namespace.Bar> -> Foo<Bar>
+    return $"{reader.GetString(definition.Namespace)}.{reader.GetString(definition.Name)}";
   }
 
   public string GetTypeFromReference(MetadataReader reader, TypeReferenceHandle handle, byte rawTypeKind)
   {
     TypeReference definition = reader.GetTypeReference(handle);
-    return reader.GetString(definition.Namespace) + "." + reader.GetString(definition.Name);
+    return $"{reader.GetString(definition.Namespace)}.{reader.GetString(definition.Name)}";
   }
 
   public string GetArrayType(string elementType, ArrayShape shape) => throw new NotImplementedException();

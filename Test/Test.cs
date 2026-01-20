@@ -1,12 +1,9 @@
-﻿using System;
-
-public unsafe struct ShouldExist<T>
+﻿public unsafe struct ShouldExist<T>
 {
   public int x;
   public int* y;
   public int?* z;
 }
-
 
 public struct ShouldNotExist_HasT<T>
 {

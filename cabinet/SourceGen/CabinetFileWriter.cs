@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace cabinet.SourceGen;
@@ -19,11 +20,11 @@ internal static class CabinetFileWriter
   /// <summary>
   /// Generates the source for the specified objects and writes it to the specified file.
   /// </summary>
-  public static void Write(string filePath, CStruct[] structs)
+  public static void Write(string filePath, CStruct[] structs, CFunction[] functions)
   {
-    string structsStr = string.Join("\n\n", structs.Select(x => x.ToString()));
+    List<string> elements = [.. structs.Select(x => x.ToString()), .. functions.Select(x => x.ToString())];
 
-    string content = string.Format(SHELL, structsStr);
+    string content = string.Format(SHELL, string.Join("\n\n", elements));
 
     File.WriteAllText(filePath, content);
   }

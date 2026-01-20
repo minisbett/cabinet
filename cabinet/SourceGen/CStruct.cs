@@ -13,18 +13,13 @@ internal class CStruct(string name, CField[] fields)
   public string Name => name;
 
   /// <summary>
-  /// The fields declared by this struct.
-  /// </summary>
-  public CField[] Fields => fields;
-
-  /// <summary>
   /// Returns the source code for this struct.
   /// </summary>
   public override string ToString()
   => $$"""
-     struct {{Name}}
+     typedef struct {{Name}}
      {
-         {{string.Join("\n    ", Fields.Select(x => x.ToString()))}}
-     };
+         {{string.Join("\n    ", fields.Select(x => x.ToString()))}}
+     } {{Name}};
      """;
 }

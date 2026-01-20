@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
+using System.Resources;
 using cabinet.Metadata;
 using cabinet.SourceGen;
 using Microsoft.Build.Framework;
@@ -39,48 +40,72 @@ public class Cabinet : Microsoft.Build.Utilities.Task
     MetadataReader reader = peReader.GetMetadataReader();
 
     TypeMetadata[] types = [.. reader.TypeDefinitions.Select(x => TypeMetadata.FromHandle(reader, x))];
-    TypeMetadata[] structTypes = [.. types.Where(x => x.IsStruct)];
+    TypeMetadata[] structs = [.. types.Where(x => x.IsStruct)];
 
-    // -----------------------------
-    // -          Structs          -
-    // -----------------------------
-    List<CStruct> structs = [];
+    List<CStruct> cStructs = [];
 
     string EnsureNullableHelperStruct(string fieldType)
     {
       string structName = $"Cabinet__Nullable_{fieldType}";
       if (!structs.Any(x => x.Name == structName))
-        structs.Add(new($"Cabinet__Nullable_{fieldType}", [new("bool", "hasValue"), new(fieldType, "value")]));
+        cStructs.Add(new(structName, [new("bool", "hasValue"), new(fieldType, "value")]));
 
-      return $"Cabinet__Nullable_{fieldType}";
+      return structName;
     }
 
-    foreach (TypeMetadata type in structTypes)
+    // -----------------------------
+    // -          Structs          -
+    // -----------------------------
+    // 1st pass: Ignore the struct if it contains any fields that are of generic type or a generic parameter.
+    bool isValid(FieldMetadata field) => !field.Type.IsGenericParameter && !field.Type.IsGeneric;
+    TypeMetadata[] validStructs = [..structs.Where(x => x.Fields.All(isValid))];
+    // 2nd pass: Apply the same constraints as in the first pass, but allow fields with a type that is included in the first pass.
+    //           This effectively allows fields with generic struct types that are included in the first pass (has no field with generic parameters).
+    validStructs = [.. structs.Where(x => x.Fields.All(j => isValid(j) || validStructs.Any(k => k.FullName == j.Type.FullName)))];
+    foreach (TypeMetadata type in validStructs)
     {
-      string typeName = type.Name.Split('`')[0]; // Foo`1 -> Foo
-
-      // If the struct has fields whose types are either 1. generic type (Foo<T>) or 2. generic parameter (T), ignore this type.
-      // If a struct is generic, but has no fields with a generic parameter as type, the struct is safe to pass.
-      if (type.Fields.Any(x => x.IsGenericType || x.IsGenericParameterType))
-        continue;
-
       List<CField> fields = [];
       foreach (FieldMetadata field in type.Fields)
       {
-        string fieldType = _cTypeMap.TryGetValue(field.Type, out string cType) ? cType : field.Type;
-        if (field.IsNullableType)
+        string fieldType = MapToCType(field.Type.Name);
+        if (field.Type.IsNullable)
           fieldType = EnsureNullableHelperStruct(fieldType);
 
-        fields.Add(new(fieldType, field.Name.ToCamelCase(), field.IsPointerType));
+        fields.Add(new(fieldType, field.Name.ToCamelCase(), field.Type.IsPointer));
       }
 
-      structs.Add(new(typeName, [.. fields]));
+      cStructs.Add(new(type.Name, [.. fields]));
     }
 
-    CabinetFileWriter.Write(Path.Combine(OutDir, "cabinet.h"), [.. structs]);
+    // -----------------------------
+    // -         Functions         -
+    // -----------------------------
+    List<CFunction> cFunctions = [];
+    foreach (ExportedMethodMetadata method in types.SelectMany(x => x.ExportedMethods))
+    {
+      string returnType = MapToCType(method.ReturnType.Name);
+      if(method.ReturnType.IsNullable)
+        returnType = EnsureNullableHelperStruct(returnType);
+
+      List<(string, (string, bool))> parameters = [];
+      foreach((string name, SignatureTypeMetadata type) in method.Parameters)
+      {
+        string typeName = MapToCType(type.Name);
+        if(type.IsNullable)
+          typeName = EnsureNullableHelperStruct(typeName);
+
+        parameters.Add((name, (typeName, type.IsPointer)));
+      }
+
+      cFunctions.Add(new(returnType, method.EntryPoint, method.ReturnType.IsPointer, [.. parameters]));
+    }
+
+    CabinetFileWriter.Write(Path.Combine(OutDir, "cabinet.h"), [.. cStructs], [..cFunctions]);
 
     return true;
   }
+
+  private static string MapToCType(string typeName) => _cTypeMap.TryGetValue(typeName, out string cType) ? cType : typeName;
 
   /// <summary>
   /// A map for the string representation of C#-types into C-types.
@@ -89,7 +114,7 @@ public class Cabinet : Microsoft.Build.Utilities.Task
   private static readonly Dictionary<string, string> _cTypeMap = new()
   {
     ["Boolean"] = "bool",
-    ["Char"] = "char16_t",
+    ["Char"] = "int16_t", // char16_t would be C11 standard
     ["SByte"] = "int8_t",
     ["Byte"] = "uint8_t",
     ["Int16"] = "int16_t",
@@ -99,7 +124,6 @@ public class Cabinet : Microsoft.Build.Utilities.Task
     ["Int64"] = "int64_t",
     ["UInt64"] = "uint64_t",
     ["Single"] = "float",
-    ["Double"] = "double",
-    ["String"] = "char*"
+    ["Double"] = "double"
   };
 }
