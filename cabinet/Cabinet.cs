@@ -49,7 +49,7 @@ public class Cabinet : Microsoft.Build.Utilities.Task
     string EnsureNullableHelperStruct(string fieldType)
     {
       string structName = $"Cabinet__Nullable_{fieldType}";
-      if (!structs.Any(x => x.Name == structName))
+      if (!cStructs.Any(x => x.Name == structName))
         cStructs.Add(new(structName, [new("bool", "hasValue"), new(fieldType, "value")]));
 
       return structName;
@@ -59,7 +59,7 @@ public class Cabinet : Microsoft.Build.Utilities.Task
     // -           Enums           -
     // -----------------------------
     foreach (TypeMetadata @enum in enums)
-      cEnums.Add(new(@enum.Name, [.. @enum.Fields.Select(x => (x.Name, x.DefaultValue))]));
+      cEnums.Add(new(@enum.Name, [.. @enum.Fields.Select(x => (x.Name, x.DefaultValue!))]));
 
     // -----------------------------
     // -          Structs          -
