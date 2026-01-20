@@ -4,8 +4,9 @@
     <TargetFramework>netstandard2.0</TargetFramework>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
-		<GenerateCabinet>true</GenerateCabinet>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<GenerateCabinet>true</GenerateCabinet>
+		<CabinetHeaderFile>test.h</CabinetHeaderFile>
   </PropertyGroup>
 
 	<Import Project="../cabinet/build/cabinet.targets" />

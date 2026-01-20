@@ -1,7 +1,11 @@
 <Project>
+	<PropertyGroup>
+		<CabinetHeaderFile Condition="$(CabinetHeaderFile) == ''">cabinet.h</CabinetHeaderFile>
+	</PropertyGroup>
+	
 	<UsingTask TaskName="cabinet.Cabinet" AssemblyFile="$(MSBuildThisFileDirectory)../bin/Debug/netstandard2.0/cabinet.dll" />
 
 	<Target Name="CabinetGenerate" AfterTargets="Build" Condition="'$(GenerateCabinet)' == 'true'">
-		<Cabinet OutDir="$(OutDir)" TargetPath="$(TargetPath)" />
+		<Cabinet OutDir="$(OutDir)" TargetPath="$(TargetPath)" HeaderFile="$(CabinetHeaderFile)" />
 	</Target>
 </Project>
