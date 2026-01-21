@@ -9,6 +9,24 @@
   <ItemGroup>
 		<PackageReference Include="Microsoft.Build.Utilities.Core" Version="18.0.2" />
     <PackageReference Include="System.Reflection.Metadata" Version="7.0.0" />
+		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.102" PrivateAssets="All" />
   </ItemGroup>
+
+	<PropertyGroup>
+		<PackageId>cabi.net</PackageId>
+		<Authors>minisbett</Authors>
+		<Description>C-ABI-NET - An MSBuild task that generates a C-header for NativeAOT APIs.</Description>
+		<PackageTags>csharp, msbuild, pinvoke, codegen, c-header, nativeaot</PackageTags>
+		<PackageLicenseType>LICENSE</PackageLicenseType>
+		<!--<GenerateDocumentationFile>true</GenerateDocumentationFile>-->
+		<RepositoryUrl>https://github.com/minisbett/cabinet</RepositoryUrl>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<DebugType>embedded</DebugType>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+		<ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+	</PropertyGroup>
 
 </Project>
