@@ -20,7 +20,7 @@ jobs:
               run: dotnet build cabinet/cabinet.csproj --configuration Release /p:Version=${GITHUB_REF#refs/tags/v}
 
             - name: Pack
-              run: dotnet pack cabinet/cabinet.csproj -o artifacts --no-build
+              run: dotnet pack cabinet/cabinet.csproj -o artifacts --no-build /p:Version=${GITHUB_REF#refs/tags/v}
 
             - name: Publish
               run: dotnet nuget push artifacts/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
