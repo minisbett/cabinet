@@ -124,7 +124,7 @@ public class Cabinet : Microsoft.Build.Utilities.Task
   private static readonly Dictionary<string, string> _cTypeMap = new()
   {
     ["Boolean"] = "bool",
-    ["Char"] = "int16_t", // char16_t would be C11 standard
+    ["Char"] = "uint16_t", // char16_t would be C11 standard
     ["SByte"] = "int8_t",
     ["Byte"] = "uint8_t",
     ["Int16"] = "int16_t",
