@@ -110,7 +110,7 @@ public class Cabinet : Microsoft.Build.Utilities.Task
       cFunctions.Add(new(returnType, method.EntryPoint, method.ReturnType.IsPointer, [.. parameters]));
     }
 
-    CabinetFileWriter.Write(Path.Combine(OutDir, HeaderFile), [.. cEnums], [.. cStructs], [.. cFunctions]);
+    CabinetFileWriter.Write(Path.Combine(OutDir, HeaderFile), [.. cEnums], [.. cStructs], [.. cFunctions], TargetPath);
 
     return true;
   }
