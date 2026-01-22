@@ -9,5 +9,5 @@
 		<CabinetHeaderFile>test.h</CabinetHeaderFile>
   </PropertyGroup>
 
-	<Import Project="../cabinet/build/cabinet.targets" />
+	<Import Project="../cabinet/cabi.net.targets" />
 </Project>
