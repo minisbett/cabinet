@@ -32,8 +32,6 @@ public class CabinetTask : Microsoft.Build.Utilities.Task
       return false;
     }
 
-    Debugger.Launch();
-
     Cabinet cabinet = Cabinet.FromAssemblyFile(TargetPath);
     CabinetFileWriter.Write(Path.Combine(OutDir, HeaderFile), cabinet, TargetPath);
 

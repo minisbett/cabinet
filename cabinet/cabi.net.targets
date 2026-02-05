@@ -9,6 +9,6 @@
 	<UsingTask TaskName="cabinet.CabinetTask" AssemblyFile="$(_TaskDllPath)" />
 
 	<Target Name="CabinetGenerate" AfterTargets="Build" Condition="'$(GenerateCabinet)' == 'true'">
-		<Cabinet OutDir="$(OutDir)" TargetPath="$(TargetPath)" HeaderFile="$(CabinetHeaderFile)" />
+		<CabinetTask OutDir="$(OutDir)" TargetPath="$(TargetPath)" HeaderFile="$(CabinetHeaderFile)" />
 	</Target>
 </Project>
