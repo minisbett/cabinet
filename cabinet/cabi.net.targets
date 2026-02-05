@@ -6,7 +6,7 @@
 		<_TaskDllPath Condition="!Exists('$(_TaskDllPath)')">$(MSBuildThisFileDirectory)bin\$(Configuration)\netstandard2.0\cabinet.dll</_TaskDllPath>
 	</PropertyGroup>
 	
-	<UsingTask TaskName="cabinet.Cabinet" AssemblyFile="$(_TaskDllPath)" />
+	<UsingTask TaskName="cabinet.CabinetTask" AssemblyFile="$(_TaskDllPath)" />
 
 	<Target Name="CabinetGenerate" AfterTargets="Build" Condition="'$(GenerateCabinet)' == 'true'">
 		<Cabinet OutDir="$(OutDir)" TargetPath="$(TargetPath)" HeaderFile="$(CabinetHeaderFile)" />

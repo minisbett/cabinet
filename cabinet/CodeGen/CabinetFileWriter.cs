@@ -25,9 +25,9 @@ internal static class CabinetFileWriter
     """;
 
   /// <summary>
-  /// Generates the source for the specified objects and writes it to the specified file.
+  /// Generates the source for the specified cabinet and writes it to the specified file.
   /// </summary>
-  public static void Write(string filePath, CEnum[] enums, CStruct[] structs, CFunction[] functions, string assemblyFile)
+  public static void Write(string filePath, Cabinet cabinet, string assemblyFile)
   {
     string version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion.Split('+')
 #if RELEASE
@@ -36,11 +36,13 @@ internal static class CabinetFileWriter
       [1];
 #endif
 
-    string enumsStr = string.Join("\n\n", enums.Select(x => x.ToString()));
-    string structsStr = string.Join("\n\n", structs.Select(x => x.ToString()));
-    string functionsStr = string.Join("\n", functions.Select(x => x.ToString()));
+    string timestamp = DateTimeOffset.Now.ToString("yyyy-MM-dd HH:mm:ss K");
 
-    string content = string.Format(SHELL, version, assemblyFile, $"{DateTimeOffset.Now:yyyy-mm-dd HH:mm:ss K}", string.Join("\n\n", [enumsStr, structsStr, functionsStr]));
+    string enumsStr = string.Join("\n\n", cabinet.Enums.Select(x => x.ToString()));
+    string structsStr = string.Join("\n\n", cabinet.Structs.Select(x => x.ToString()));
+    string functionsStr = string.Join("\n", cabinet.Functions.Select(x => x.ToString()));
+
+    string content = string.Format(SHELL, version, assemblyFile, timestamp, string.Join("\n\n", [enumsStr, structsStr, functionsStr]));
     File.WriteAllText(filePath, content);
   }
 }

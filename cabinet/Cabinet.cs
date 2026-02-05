@@ -1,120 +1,131 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
+using System.Text.RegularExpressions;
 using cabinet.CodeGen;
 using cabinet.Metadata;
-using Microsoft.Build.Framework;
 
 namespace cabinet;
 
-public class Cabinet : Microsoft.Build.Utilities.Task
+/// <summary>
+/// Processes a .NET assembly into the C-header elements.
+/// </summary>
+internal class Cabinet
 {
-  /// <summary>
-  /// The $(OutDir) MSBuild variable. Represents the output directory of the compilation.
-  /// </summary>
-  [Required]
-  public string OutDir { get; set; } = null!;
+  private readonly List<CEnum> _enums = [];
+  private readonly List<CStruct> _structs = [];
+  private readonly List<CFunction> _functions = [];
 
   /// <summary>
-  /// The $(TargetPath) MSBuild variable. Represents the path to the compiled binary.
+  /// The C-enums in this cabinet.
   /// </summary>
-  [Required]
-  public string TargetPath { get; set; } = null!;
+  public IReadOnlyList<CEnum> Enums => _enums.AsReadOnly();
 
   /// <summary>
-  /// Represents the header filepath, relative to <see cref="OutDir"/>.
+  /// The C-structs in this cabinet.
   /// </summary>
-  public string HeaderFile { get; set; } = null!;
+  public IReadOnlyList<CStruct> Structs => _structs.AsReadOnly();
 
-  public override bool Execute()
+  /// <summary>
+  /// The C-functions in this cabinet.
+  /// </summary>
+  public IReadOnlyList<CFunction> Functions => _functions.AsReadOnly();
+
+  /// <summary>
+  /// Creates a new cabinet by processing the specified assembly file.
+  /// </summary>
+  public static Cabinet FromAssemblyFile(string assemblyFile) => new(assemblyFile);
+
+  private Cabinet(string assemblyFile)
   {
-    if (!File.Exists(TargetPath))
-    {
-      Log.LogError($"The target assembly ('{TargetPath}') could not be found. Please make sure the Cabinet task is executed post-build.");
-      return false;
-    }
-
-    using FileStream fs = File.OpenRead(TargetPath);
+    using FileStream fs = File.OpenRead(assemblyFile);
     using PEReader peReader = new(fs);
     MetadataReader reader = peReader.GetMetadataReader();
-
     TypeMetadata[] types = [.. reader.TypeDefinitions.Select(x => TypeMetadata.FromHandle(reader, x))];
-    TypeMetadata[] enums = [.. types.Where(x => x.IsEnum)];
-    TypeMetadata[] structs = [.. types.Where(x => x.IsStruct)];
-    ExportedMethodMetadata[] methods = [.. types.SelectMany(x => x.ExportedMethods)];
 
-    List<CEnum> cEnums = [];
-    List<CStruct> cStructs = [];
-    List<CFunction> cFunctions = [];
+    foreach (TypeMetadata @enum in types.Where(x => x.IsEnum))
+      ProcessEnum(@enum);
 
-    string EnsureNullableHelperStruct(string fieldType)
-    {
-      string structName = $"Cabinet__Nullable_{fieldType}";
-      if (!cStructs.Any(x => x.Name == structName))
-        cStructs.Add(new(structName, [new("bool", "hasValue"), new(fieldType, "value")]));
-
-      return structName;
-    }
-
-    // -----------------------------
-    // -           Enums           -
-    // -----------------------------
-    foreach (TypeMetadata @enum in enums)
-      cEnums.Add(new(@enum.Name, [.. @enum.Fields.Select(x => (x.Name, x.DefaultValue!))]));
-
-    // -----------------------------
-    // -          Structs          -
-    // -----------------------------
     // 1st pass: Ignore the struct if it contains any fields that are of generic type or a generic parameter.
-    bool isValid(FieldMetadata field) => !field.Type.IsGenericParameter && !field.Type.IsGeneric;
-    TypeMetadata[] validStructs = [.. structs.Where(x => x.Fields.All(isValid))];
+    static bool isValid(FieldMetadata field) => !field.Type.IsGenericParameter && !field.Type.IsGeneric;
+    TypeMetadata[] validStructs = [.. types.Where(x => x.IsStruct && x.Fields.All(isValid))];
     // 2nd pass: Apply the same constraints as in the first pass, but allow fields with a type that is included in the first pass.
     //           This effectively allows fields with generic struct types that are included in the first pass (has no field with generic parameters).
-    validStructs = [.. structs.Where(x => x.Fields.All(j => isValid(j) || validStructs.Any(k => k.FullName == j.Type.FullName)))];
-    foreach (TypeMetadata type in validStructs)
-    {
-      List<CField> fields = [];
-      foreach (FieldMetadata field in type.Fields)
-      {
-        string fieldType = MapToCType(field.Type.Name);
-        if (field.Type.IsNullable)
-          fieldType = EnsureNullableHelperStruct(fieldType);
+    validStructs = [.. types.Where(x => x.IsStruct && x.Fields.All(j => isValid(j) || validStructs.Any(k => k.FullName == j.Type.FullName)))];
+    foreach (TypeMetadata @struct in validStructs)
+      ProcessStruct(@struct);
 
-        fields.Add(new(fieldType, field.Name.Substring(0, 1).ToLower() + field.Name.Substring(1), field.Type.IsPointer));
-      }
-
-      cStructs.Add(new(type.Name, [.. fields]));
-    }
-
-    // -----------------------------
-    // -         Functions         -
-    // -----------------------------
-    foreach (ExportedMethodMetadata method in methods)
-    {
-      string returnType = MapToCType(method.ReturnType.Name);
-      if (method.ReturnType.IsNullable)
-        returnType = EnsureNullableHelperStruct(returnType);
-
-      List<(string, (string, bool))> parameters = [];
-      foreach ((string name, SignatureTypeMetadata type) in method.Parameters)
-      {
-        string typeName = MapToCType(type.Name);
-        if (type.IsNullable)
-          typeName = EnsureNullableHelperStruct(typeName);
-
-        parameters.Add((name, (typeName, type.IsPointer)));
-      }
-
-      cFunctions.Add(new(returnType, method.EntryPoint, method.ReturnType.IsPointer, [.. parameters]));
-    }
-
-    CabinetFileWriter.Write(Path.Combine(OutDir, HeaderFile), [.. cEnums], [.. cStructs], [.. cFunctions], TargetPath);
-
-    return true;
+    foreach (ExportedMethodMetadata method in types.SelectMany(x => x.ExportedMethods))
+      ProcessMethod(method);
   }
 
+  /// <summary>
+  /// Processes the specified enum type.
+  /// </summary>
+  private void ProcessEnum(TypeMetadata @enum)
+  {
+    _enums.Add(new(@enum.Name, [.. @enum.Fields.Select(x => (Regex.Replace(x.Name, @"([a-z0-9])([A-Z])|[\s\-]+", "$1_$2").ToUpper(), x.DefaultValue!))]));
+  }
+
+  /// <summary>
+  /// Processes the specified struct type.
+  /// </summary>
+  private void ProcessStruct(TypeMetadata @struct)
+  {
+    List<CField> fields = [];
+    foreach (FieldMetadata field in @struct.Fields)
+    {
+      string fieldType = MapToCType(field.Type.Name);
+      if (field.Type.IsNullable)
+        fieldType = EnsureNullableStruct(fieldType);
+
+      fields.Add(new(fieldType, field.Name.Substring(0, 1).ToLower() + field.Name.Substring(1) /* camelCase */, field.Type.IsPointer));
+    }
+
+    _structs.Add(new(@struct.Name, [.. fields]));
+  }
+
+  /// <summary>
+  /// Processes the specified method.
+  /// </summary>
+  private void ProcessMethod(ExportedMethodMetadata method)
+  {
+    string returnType = MapToCType(method.ReturnType.Name);
+    if (method.ReturnType.IsNullable)
+      returnType = EnsureNullableStruct(returnType);
+
+    List<(string, (string, bool))> parameters = [];
+    foreach ((string name, SignatureTypeMetadata type) in method.Parameters)
+    {
+      string typeName = MapToCType(type.Name);
+      if (type.IsNullable)
+        typeName = EnsureNullableStruct(typeName);
+
+      parameters.Add((name, (typeName, type.IsPointer)));
+    }
+
+    _functions.Add(new(returnType, method.EntryPoint, method.ReturnType.IsPointer, [.. parameters]));
+  }
+
+  /// <summary>
+  /// Creates a nullable helper struct for the specified field type, if it does not already exist, and returns the structs' name.
+  /// </summary>
+  private string EnsureNullableStruct(string fieldType)
+  {
+    string structName = $"Cabinet__Nullable_{fieldType}";
+    if (!_structs.Any(x => x.Name == structName))
+      _structs.Add(new(structName, [new("bool", "hasValue"), new(fieldType, "value")]));
+
+    return structName;
+  }
+
+  /// <summary>
+  /// Maps the specified C# type name into the C-equivalent. If none exists, the specified type name is returned as-is.
+  /// </summary>
   private static string MapToCType(string typeName) => _cTypeMap.TryGetValue(typeName, out string cType) ? cType : typeName;
 
   /// <summary>

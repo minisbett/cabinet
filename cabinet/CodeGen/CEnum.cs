@@ -15,7 +15,7 @@ internal class CEnum(string name, (string Name, object Value)[] values)
     => $$"""
        typedef enum {{name}}
        {
-           {{string.Join(",\n    ", values.Select(x => $"{Regex.Replace(x.Name, @"([a-z0-9])([A-Z])|[\s\-]+", "$1_$2").ToUpper()} = {x.Value}"))}}
+           {{string.Join(",\n    ", values.Select(x => $"{x.Name} = {x.Value}"))}}
        } {{name}};
        """;
 }

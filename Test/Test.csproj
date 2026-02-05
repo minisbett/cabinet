@@ -6,7 +6,6 @@
 		<Nullable>enable</Nullable>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<GenerateCabinet>true</GenerateCabinet>
-		<CabinetHeaderFile>test.h</CabinetHeaderFile>
   </PropertyGroup>
 
 	<Import Project="../cabinet/cabi.net.targets" />

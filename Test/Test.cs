@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-
-public unsafe struct ShouldExist<T>()
+﻿public unsafe struct ShouldExist<T>()
 {
   public int x;
   public int* y;
