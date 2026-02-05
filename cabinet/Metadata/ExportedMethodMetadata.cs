@@ -32,10 +32,16 @@ internal class ExportedMethodMetadata(string entryPoint, SignatureTypeMetadata r
     MethodDefinition definition = reader.GetMethodDefinition(handle);
     TypeDefinition type = reader.GetTypeDefinition(definition.GetDeclaringType());
 
+    string s = reader.GetString(definition.Name);
+    string t = reader.GetString(type.Name);
+
     foreach (CustomAttribute attribute in definition.GetCustomAttributes().Select(reader.GetCustomAttribute)
           .Where(x => x.Constructor.Kind is HandleKind.MemberReference))
     {
       MemberReference ctorReference = reader.GetMemberReference((MemberReferenceHandle)attribute.Constructor);
+      if (ctorReference.Parent.Kind is not HandleKind.TypeReference)
+        continue;
+
       TypeReference attributeReference = reader.GetTypeReference((TypeReferenceHandle)ctorReference.Parent);
       string attributeNamespace = reader.GetString(attributeReference.Namespace);
       string attributeName = reader.GetString(attributeReference.Name);
