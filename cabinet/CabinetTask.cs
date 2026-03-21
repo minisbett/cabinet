@@ -8,10 +8,10 @@ namespace cabinet;
 public class CabinetTask : Microsoft.Build.Utilities.Task
 {
   /// <summary>
-  /// The $(OutDir) MSBuild variable. Represents the output directory of the compilation.
+  /// The $(PublishDir) MSBuild variable. Represents the output directory of the compilation.
   /// </summary>
   [Required]
-  public string OutDir { get; set; } = null!;
+  public string PublishDir { get; set; } = null!;
 
   /// <summary>
   /// The $(TargetPath) MSBuild variable. Represents the path to the compiled binary.
@@ -20,7 +20,7 @@ public class CabinetTask : Microsoft.Build.Utilities.Task
   public string TargetPath { get; set; } = null!;
 
   /// <summary>
-  /// Represents the header filepath, relative to <see cref="OutDir"/>.
+  /// Represents the header filepath, relative to <see cref="PublishDir"/>.
   /// </summary>
   public string HeaderFile { get; set; } = null!;
 
@@ -33,7 +33,7 @@ public class CabinetTask : Microsoft.Build.Utilities.Task
     }
 
     Cabinet cabinet = Cabinet.FromAssemblyFile(TargetPath);
-    CabinetFileWriter.Write(Path.Combine(OutDir, HeaderFile), cabinet, TargetPath);
+    CabinetFileWriter.Write(Path.Combine(PublishDir, HeaderFile), cabinet, TargetPath);
 
     Log.LogMessage("Cabinet header file generated successfully.");
 

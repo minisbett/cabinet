@@ -2,13 +2,13 @@
 	<PropertyGroup>
 		<CabinetHeaderFile Condition="$(CabinetHeaderFile) == ''">cabinet.h</CabinetHeaderFile>
 
-		<_TaskDllPath>$(MSBuildThisFileDirectory)..\lib\netstandard2.0\cabinet.dll</_TaskDllPath>
-		<_TaskDllPath Condition="!Exists('$(_TaskDllPath)')">$(MSBuildThisFileDirectory)bin\$(Configuration)\netstandard2.0\cabinet.dll</_TaskDllPath>
+		<_TaskDllPath>$(MSBuildThisFileDirectory)../lib/netstandard2.0/cabinet.dll</_TaskDllPath>
+		<_TaskDllPath Condition="!Exists('$(_TaskDllPath)')">$(MSBuildThisFileDirectory)bin/$(Configuration)/netstandard2.0/cabinet.dll</_TaskDllPath>
 	</PropertyGroup>
 	
 	<UsingTask TaskName="cabinet.CabinetTask" AssemblyFile="$(_TaskDllPath)" />
 
-	<Target Name="CabinetGenerate" AfterTargets="Build" Condition="'$(GenerateCabinet)' == 'true'">
-		<CabinetTask OutDir="$(OutDir)" TargetPath="$(TargetPath)" HeaderFile="$(CabinetHeaderFile)" />
+	<Target Name="CabinetGenerate" AfterTargets="Publish" Condition="'$(GenerateCabinet)' == 'true'">
+		<CabinetTask PublishDir="$(PublishDir)" TargetPath="$(TargetPath)" HeaderFile="$(CabinetHeaderFile)" />
 	</Target>
 </Project>
